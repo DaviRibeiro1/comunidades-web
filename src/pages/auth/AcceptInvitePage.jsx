@@ -1,10 +1,34 @@
 import { useState, useEffect } from 'react'
 import { apiFetch } from '../../api/client'
+import { PasswordInput } from '../../components/ui/PasswordInput'
+
+function formatCpf(value) {
+  const digits = value.replace(/\D/g, '').slice(0, 11)
+  return digits
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+}
+
+function isValidCpf(value) {
+  const digits = value.replace(/\D/g, '')
+  if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false
+
+  const calc = (end) => {
+    let sum = 0
+    for (let i = 0; i < end; i++) sum += parseInt(digits[i]) * (end + 1 - i)
+    const rem = (sum * 10) % 11
+    return rem === 10 || rem === 11 ? 0 : rem
+  }
+
+  return calc(9) === parseInt(digits[9]) && calc(10) === parseInt(digits[10])
+}
 
 export function AcceptInvitePage({ token: inviteToken }) {
   const [data,    setData]    = useState(null)
   const [error,   setError]   = useState('')
   const [loading, setLoading] = useState(true)
+  const [cpfError, setCpfError] = useState('')
   const [form, setForm] = useState({
     full_name: '', cpf: '', address: '', password: ''
   })
@@ -13,13 +37,29 @@ export function AcceptInvitePage({ token: inviteToken }) {
 
   useEffect(() => {
     apiFetch(`/invites/validate/${inviteToken}`)
-      .then(setData)
+      .then(res => {
+        setData(res)
+        const formattedCpf = formatCpf(res.cpf || '')
+        if (!isValidCpf(res.cpf || '')) {
+          setCpfError('CPF inválido. Entre em contato com o administrador.')
+        }
+        setForm(p => ({
+          ...p,
+          full_name: res.full_name || '',
+          cpf:       formattedCpf,
+          address:   res.address   || '',
+        }))
+      })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [inviteToken])
 
   async function handleAccept(e) {
     e.preventDefault()
+    if (!isValidCpf(form.cpf)) {
+      setCpfError('CPF inválido. Entre em contato com o administrador.')
+      return
+    }
     setLoading(true)
     try {
       const res = await apiFetch('/invites/accept', {
@@ -130,29 +170,48 @@ export function AcceptInvitePage({ token: inviteToken }) {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Nome Completo *</label>
-            <input className="form-input" value={form.full_name}
+            <label className="form-label">Nome Completo</label>
+            <input
+              className="form-input"
+              value={form.full_name}
               onChange={e => set('full_name', e.target.value)}
-              required placeholder="Seu nome completo" />
+              style={{ background: 'var(--bg)', color: 'var(--text-soft)' }}
+            />
           </div>
 
           <div className="form-group">
-            <label className="form-label">CPF *</label>
-            <input className="form-input" value={form.cpf}
-              onChange={e => set('cpf', e.target.value)}
-              required placeholder="000.000.000-00" maxLength={14} />
+            <label className="form-label">CPF</label>
+            <input
+              className="form-input"
+              value={form.cpf}
+              disabled
+              maxLength={14}
+              style={{
+                background: 'var(--bg)',
+                color: cpfError ? 'var(--danger, #c00)' : 'var(--text-soft)',
+                borderColor: cpfError ? 'var(--danger, #c00)' : undefined,
+              }}
+            />
+            {cpfError && (
+              <span style={{ color: 'var(--danger, #c00)', fontSize: 12, marginTop: 4, display: 'block' }}>
+                ⚠️ {cpfError}
+              </span>
+            )}
           </div>
 
           <div className="form-group">
-            <label className="form-label">Endereço *</label>
-            <input className="form-input" value={form.address}
-              onChange={e => set('address', e.target.value)}
-              required placeholder="Rua, número, bairro, cidade" />
+            <label className="form-label">Endereço</label>
+            <input
+              className="form-input"
+              value={form.address}
+              disabled
+              style={{ background: 'var(--bg)', color: 'var(--text-soft)' }}
+            />
           </div>
 
           <div className="form-group">
             <label className="form-label">Criar Senha *</label>
-            <input className="form-input" type="password"
+            <PasswordInput
               value={form.password}
               onChange={e => set('password', e.target.value)}
               required placeholder="Mínimo 6 caracteres" minLength={6} />

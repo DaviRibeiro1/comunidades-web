@@ -1,6 +1,7 @@
 // src/pages/auth/LoginPage.jsx
 import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
+import { PasswordInput } from '../../components/ui/PasswordInput'
 
 export function LoginPage({ onGoRequest }) {
   const { login } = useAuth()
@@ -42,7 +43,7 @@ export function LoginPage({ onGoRequest }) {
           </div>
           <div className="form-group">
             <label className="form-label">Senha</label>
-            <input className="form-input" type="password" placeholder="••••••••"
+            <PasswordInput placeholder="••••••••"
               value={password} onChange={e => setPassword(e.target.value)} required />
           </div>
           <button className="btn btn-primary btn-full" disabled={loading}>
