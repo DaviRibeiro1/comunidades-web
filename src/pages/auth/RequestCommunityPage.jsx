@@ -106,7 +106,7 @@ export function RequestCommunityPage({ onBack }) {
               placeholder="seu@email.com" />
           </div>
           <div className="form-group">
-            <label className="form-label">CPF *</label>
+            <label className="form-label">CPF</label>
             <input
               className="form-input"
               value={form.requester_cpf}
@@ -123,7 +123,7 @@ export function RequestCommunityPage({ onBack }) {
             )}
           </div>
           <div className="form-group">
-            <label className="form-label">Endereço *</label>
+            <label className="form-label">Endereço</label>
             <input className="form-input" value={form.requester_address}
               onChange={e => set('requester_address', e.target.value)} required
               placeholder="Rua, número, bairro, cidade" />
@@ -135,7 +135,7 @@ export function RequestCommunityPage({ onBack }) {
               placeholder="Ex: Jardim Primavera" />
           </div>
           <div className="form-group">
-            <label className="form-label">Descrição (opcional)</label>
+            <label className="form-label">Descrição</label>
             <textarea className="form-textarea" value={form.community_description}
               onChange={e => set('community_description', e.target.value)}
               placeholder="Conte sobre sua comunidade..." />

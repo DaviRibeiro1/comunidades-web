@@ -1,7 +1,6 @@
 // src/components/modals/ServiceDetailModal.jsx
 import { useState } from 'react'
 import { Modal } from '../ui/Modal'
-import { StatusBadge } from '../ui/Badge'
 import { applicationsApi } from '../../api/services'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
@@ -18,7 +17,7 @@ export function ServiceDetailModal({ service, onClose }) {
     try {
       await applicationsApi.apply(token, service.id, { message })
       setApplied(true)
-      toast('Candidatura enviada com sucesso!')
+      toast('Mensagem enviada com sucesso!')
     } catch (err) {
       toast(err.message, 'error')
     } finally {
@@ -28,16 +27,13 @@ export function ServiceDetailModal({ service, onClose }) {
 
   return (
     <Modal
-      title={service.title}
-      subtitle="Detalhes do anúncio"
-      icon={service.icon}
       onClose={onClose}
       footer={
         !applied ? (
           <>
             <button className="btn btn-outline btn-sm" onClick={onClose}>Fechar</button>
             <button className="btn btn-primary btn-sm" onClick={handleApply} disabled={applying}>
-              {applying ? '⌛' : '🤝'} Candidatar-se
+              {applying ? '⌛' : '🤝'} Enviar Mensagem
             </button>
           </>
         ) : (
@@ -48,18 +44,50 @@ export function ServiceDetailModal({ service, onClose }) {
       {applied ? (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <div style={{ fontSize: 48, marginBottom: 8 }}>✅</div>
-          <p style={{ fontWeight: 600 }}>Candidatura enviada!</p>
+          <p style={{ fontWeight: 600 }}>Mensagem enviada!</p>
           <p style={{ fontSize: 13, color: 'var(--text-soft)' }}>
-            O solicitante irá entrar em contato com você.
+            O anunciante irá entrar em contato com você.
           </p>
         </div>
       ) : (
-        <>
-          <StatusBadge status={service.status} />
-          <div style={{ marginTop: 16 }}>
-            <p style={{ fontSize: 14, color: 'var(--text-mid)', lineHeight: 1.6, marginBottom: 16 }}>
-              {service.description}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          
+          {/* Nova Imagem de Destaque no topo */}
+          <div style={{ 
+            width: '100%', 
+            height: '200px', 
+            backgroundColor: 'var(--bg-soft)', 
+            borderRadius: '8px', 
+            overflow: 'hidden' 
+          }}>
+            {service.photo_url ? (
+              <img 
+                src={service.photo_url} 
+                alt={service.title} 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+              />
+            ) : (
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>
+                📷
+              </div>
+            )}
+          </div>
+
+          {/* Título e Subtítulo movidos para baixo da foto */}
+          <div>
+            <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: '0 0 4px 0', color: 'var(--text)' }}>
+              {service.title}
+            </h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-soft)', margin: 0 }}>
+              Detalhes do anúncio
             </p>
+          </div>
+
+          <p style={{ fontSize: '14px', color: 'var(--text-mid)', lineHeight: 1.6 }}>
+            {service.description}
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <div className="detail-row">
               <span className="detail-label">💰 Preço</span>
               <span className="detail-value" style={{ color: 'var(--green)', fontWeight: 600 }}>{service.price}</span>
@@ -73,17 +101,18 @@ export function ServiceDetailModal({ service, onClose }) {
               <span className="detail-value">{service.requester?.email}</span>
             </div>
           </div>
-          <div className="form-group" style={{ marginTop: 16 }}>
-            <label className="form-label">Mensagem (opcional)</label>
+
+          <div className="form-group" style={{ marginTop: 8 }}>
+            <label className="form-label">Mensagem</label>
             <textarea
               className="form-textarea"
-              placeholder="Apresente-se e explique por que você é a pessoa certa..."
+              placeholder="Envie uma mensagem para o anunciante"
               value={message}
               onChange={e => setMessage(e.target.value)}
               style={{ minHeight: 80 }}
             />
           </div>
-        </>
+        </div>
       )}
     </Modal>
   )

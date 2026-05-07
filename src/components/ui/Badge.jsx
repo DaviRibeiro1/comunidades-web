@@ -17,7 +17,7 @@ export function StatusBadge({ status }) {
 }
 
 export function RoleBadge({ role }) {
-  const labels = { OWNER: 'Admin', MANAGER: 'Fundador', MEMBER: 'Membro' }
+  const labels = { OWNER: 'Admin', FOUNDER: 'Fundador', MANAGER: 'Gerente', MEMBER: 'Membro' }
   return (
     <span className={`role-badge role-${role?.toLowerCase()}`}>
       {labels[role] || role}

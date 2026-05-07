@@ -1,27 +1,33 @@
-// src/components/modals/NewServiceModal.jsx
+// src/components/modals/EditServiceModal.jsx
 import { useState } from 'react'
 import { Modal } from '../ui/Modal'
 import { servicesApi } from '../../api/services'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
 
-// Recomendação: Coloque isso no seu arquivo .env
-const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
-const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+const CLOUDINARY_CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'dm2vqfwnd'
+const CLOUDINARY_UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'comunidades_preset'
 
 const CATEGORIES = [
-  { value: 'SERVICE', label: 'Serviço' },
-  { value: 'PRODUCT', label: 'Produto' }
+  { value: 'SERVICE', label: 'Serviço (Pintor, Diarista...)' },
+  { value: 'PRODUCT', label: 'Produto (Venda, Doação...)' }
 ]
 
-export function NewServiceModal({ communityId, onClose, onCreated }) {
+export function EditServiceModal({ service, onClose, onUpdated }) {
   const { token } = useAuth()
   const toast = useToast()
   const [loading, setLoading] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState(null)
+  
+  // Carrega a URL da imagem existente (verificando os possíveis nomes do campo no backend)
+  const existingImageUrl = service?.photo_url || service?.image_url || null
+  const [previewUrl, setPreviewUrl] = useState(existingImageUrl)
   
   const [form, setForm] = useState({
-    image: null, title: '', description: '', price: 'A negociar', category : 'SERVICE',
+    image: null, // Fica null a menos que o usuário escolha um arquivo novo
+    title: service?.title || '', 
+    description: service?.description || '', 
+    price: service?.price || '',
+    category: service?.category || 'SERVICE' // Carrega a categoria existente ou o padrão
   })
 
   function set(key, val) { setForm(p => ({ ...p, [key]: val })) }
@@ -34,7 +40,6 @@ export function NewServiceModal({ communityId, onClose, onCreated }) {
     }
   }
 
-  // Passo 2 e 3: Função para enviar ao Cloudinary e retornar a URL
   async function uploadImageToCloudinary(file) {
     const formData = new FormData()
     formData.append('file', file)
@@ -46,38 +51,38 @@ export function NewServiceModal({ communityId, onClose, onCreated }) {
     })
 
     if (!response.ok) {
-      throw new Error('Falha ao fazer upload da imagem no Cloudinary')
+      throw new Error('Falha ao fazer upload da nova imagem no Cloudinary')
     }
 
     const data = await response.json()
-    return data.secure_url // Retorna a URL pública HTTPS
+    return data.secure_url 
   }
 
   async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
     try {
-      let photoUrl = null
+      // Inicia com a URL da foto existente
+      let finalPhotoUrl = existingImageUrl
 
-      // Se o usuário selecionou uma imagem, faz o upload primeiro
+      // Se o usuário selecionou uma nova foto, faz o upload e substitui a URL
       if (form.image) {
-        photoUrl = await uploadImageToCloudinary(form.image)
+        finalPhotoUrl = await uploadImageToCloudinary(form.image)
       }
 
-      // Passo 4: Monta o payload com a URL da foto para a sua API
+      // Monta o payload em JSON
       const payload = {
         title: form.title,
         description: form.description,
         price: form.price,
         category: form.category,
-        photo_url: photoUrl, // Passando a URL conforme seu fluxo
-        community_id: communityId
+        photo_url: finalPhotoUrl // Envia a URL nova ou a que já existia
       }
 
-      // Passo 5: Envia para o seu backend como JSON padrão
-      const s = await servicesApi.create(token, payload)
-      onCreated(s)
-      toast('Anúncio publicado!')
+      const updatedService = await servicesApi.update(token, service.id, payload)
+      
+      onUpdated(updatedService)
+      toast('Anúncio atualizado com sucesso!')
       onClose()
     } catch (err) {
       toast(err.message, 'error')
@@ -88,21 +93,21 @@ export function NewServiceModal({ communityId, onClose, onCreated }) {
 
   return (
     <Modal
-      title="Novo Anúncio"
-      subtitle="Publique um anúncio para sua comunidade"
-      icon="📷"
+      title="Editar Anúncio"
+      subtitle="Atualize as informações do seu anúncio"
+      icon="✏️"
       onClose={onClose}
       footer={
         <>
           <button className="btn btn-outline btn-sm" onClick={onClose}>Cancelar</button>
           <button className="btn btn-primary btn-sm" onClick={handleSubmit} disabled={loading}>
-            {loading ? '⌛' : '✓'} Publicar
+            {loading ? '⌛' : '✓'} Salvar Alterações
           </button>
         </>
       }
     >
       <div style={{ marginBottom: 16 }}>
-        <label className="form-label">Imagem Principal *</label>
+        <label className="form-label">Imagem Principal</label>
         <label style={{
           display: 'flex', 
           flexDirection: 'column', 
@@ -124,11 +129,26 @@ export function NewServiceModal({ communityId, onClose, onCreated }) {
             onChange={handleImageChange} 
           />
           {previewUrl ? (
-            <img 
-              src={previewUrl} 
-              alt="Preview do anúncio" 
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-            />
+            <>
+              <img 
+                src={previewUrl} 
+                alt="Preview do anúncio" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+              />
+              <div style={{
+                position: 'absolute',
+                bottom: 8,
+                right: 8,
+                background: 'rgba(0,0,0,0.6)',
+                color: 'white',
+                padding: '4px 8px',
+                borderRadius: 4,
+                fontSize: 12,
+                fontWeight: 500
+              }}>
+                Trocar foto
+              </div>
+            </>
           ) : (
             <>
               <span style={{ fontSize: 32, marginBottom: 8 }}>📷</span>
@@ -152,6 +172,7 @@ export function NewServiceModal({ communityId, onClose, onCreated }) {
           placeholder="Descreva o anúncio detalhadamente..." />
       </div>
 
+      {/* Grid com Preço e Categoria lado a lado */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div className="form-group">
           <label className="form-label">Preço</label>
