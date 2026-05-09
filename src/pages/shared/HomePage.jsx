@@ -9,6 +9,23 @@ import { NewServiceModal } from '../../components/modals/NewServiceModal'
 import { useCommunityEvents } from '../../hooks/useCommunityEvents'
 import { MOCK_SERVICES } from '../../api/mockServices'
 
+function dedupeServicesById(list) {
+  const seen = new Set()
+  return list.filter((s) => {
+    if (s?.id == null) return true
+    const key = String(s.id)
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function serviceIdExists(list, id) {
+  if (id == null) return false
+  const key = String(id)
+  return list.some((s) => s?.id != null && String(s.id) === key)
+}
+
 export function HomePage({ community }) {
   const { token } = useAuth()
   const [services,       setServices]       = useState([])
@@ -22,8 +39,8 @@ export function HomePage({ community }) {
     if (!community?.id) return
     setLoading(true)
     servicesApi.byCommunity(token, community.id)
-      .then(data => 
-        setServices([...data, ...MOCK_SERVICES])
+      .then(data =>
+        setServices(dedupeServicesById([...(Array.isArray(data) ? data : []), ...MOCK_SERVICES]))
       )
       .catch(() => setServices(MOCK_SERVICES)) // ← fallback para dados mockados
       .finally(() => setLoading(false))
@@ -31,7 +48,9 @@ export function HomePage({ community }) {
 
   // SSE — atualiza lista em tempo real
   useCommunityEvents(community?.id, token, (newService) => {
-    setServices(p => p.some(s => s.id === newService.id) ? p : [newService, ...p])
+    setServices((p) =>
+      serviceIdExists(p, newService?.id) ? p : [newService, ...p]
+    )
   })
 
   // ── Filtros aplicados ─────────────────────────────────────────
@@ -195,7 +214,9 @@ export function HomePage({ community }) {
         <NewServiceModal
           communityId={community?.id}
           onClose={() => setShowNew(false)}
-          onCreated={s => setServices(p => [s, ...p])}
+          onCreated={(s) =>
+            setServices((p) => (serviceIdExists(p, s?.id) ? p : [s, ...p]))
+          }
         />
       )}
     </div>
