@@ -21,13 +21,20 @@ export function useCommunityEvents(communityId, token, onServiceCreated) {
         const event = JSON.parse(e.data)
         if (event.type === 'service_created') {
           onServiceCreated({
-            id:          event.service_id,
+            id:          event.service_id ?? event.id,
             icon:        event.icon,
             title:       event.title,
             description: event.description,
             price:       event.price,
             status:      event.status,
-            requester:   { full_name: event.requester.full_name, email: event.requester.email }
+            category:    event.category,
+            photo_url:   event.photo_url,
+            requester:   event.requester
+              ? {
+                  full_name: event.requester.full_name,
+                  email: event.requester.email,
+                }
+              : undefined,
           })
         }
       } catch (_) {}

@@ -8,9 +8,18 @@ const NAV_BY_ROLE = {
     { id: 'all_communities', icon: '🌍', label: 'Todas as Comunidades' },
     { id: 'notifications',   icon: '🔔', label: 'Notificações' },
   ],
+  FOUNDER: [
+    { id: 'home',            icon: '🏠', label: 'Início' },
+    { id: 'my_services',     icon: '📋', label: 'Meus Anúncios' },
+    { id: 'invite',          icon: '✉️', label: 'Convidar Membros' },
+    { id: 'members',         icon: '👥', label: 'Gerenciar Membros' },
+    { id: 'manage_services', icon: '🔧', label: 'Gerenciar Anúncios' },
+    { id: 'notifications',   icon: '🔔', label: 'Notificações' },
+  ],
   MANAGER: [
     { id: 'home',            icon: '🏠', label: 'Início' },
-    { id: 'invite',          icon: '✉️',  label: 'Convidar Membros' },
+    { id: 'my_services',     icon: '📋', label: 'Meus Anúncios' },
+    { id: 'invite',          icon: '✉️', label: 'Convidar Membros' },
     { id: 'members',         icon: '👥', label: 'Gerenciar Membros' },
     { id: 'manage_services', icon: '🔧', label: 'Gerenciar Anúncios' },
     { id: 'notifications',   icon: '🔔', label: 'Notificações' },
@@ -28,8 +37,8 @@ export function Sidebar({
   communities, selectedCommunity, setSelectedCommunity,
   onLogout, unreadCount,
 }) {
-  const role  = user?.global_role || 'MEMBER'
-  const items = NAV_BY_ROLE[role] || NAV_BY_ROLE.MEMBER
+  const effectiveRole = selectedCommunity?.my_role || user?.global_role || 'MEMBER'
+  const items = NAV_BY_ROLE[effectiveRole] || NAV_BY_ROLE.MEMBER
 
   return (
     <div className="sidebar">
@@ -43,11 +52,11 @@ export function Sidebar({
       <div className="sidebar-user">
         <div className="sidebar-user-name">{user?.full_name}</div>
         <div className="sidebar-user-email">{user?.email}</div>
-        <RoleBadge role={role} />
+        <RoleBadge role={effectiveRole} />
       </div>
 
       {/* Community selector */}
-      {role !== 'OWNER' && communities.length > 0 && (
+      {effectiveRole !== 'OWNER' && communities.length > 0 && (
         <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>
             Comunidade

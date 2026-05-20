@@ -25,6 +25,7 @@ export const servicesApi = {
   manage:      (token, cId)  => apiFetch(`/services/community/${cId}/manage`, { token }),
   myServices:  (token)       => apiFetch('/services/my', { token }),
   create:      (token, body) => apiFetch('/services/', { method: 'POST', token, body }),
+  update:      (token, id, body) => apiFetch(`/services/${id}`, { method: 'PATCH', token, body }),
   delete:      (token, id)   => apiFetch(`/services/${id}`, { method: 'DELETE', token }),
   managerDelete: (token, id) => apiFetch(`/services/manager/${id}`, { method: 'DELETE', token }),
 }

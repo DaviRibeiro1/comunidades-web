@@ -97,6 +97,7 @@ h1, h2, h3, h4, h5 { font-family: 'Sora', sans-serif; }
 /* ── Role Badge ── */
 .role-badge     { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; margin-top: 6px; font-family: 'Sora', sans-serif; }
 .role-owner     { background: #FEE2E2; color: #DC2626; }
+.role-founder   { background: #FDF4FF; color: #cea32e; }
 .role-manager   { background: var(--green-pale); color: var(--green); }
 .role-member    { background: #EDE9FE; color: #7C3AED; }
 

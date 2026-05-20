@@ -1,3 +1,4 @@
+// src/pages/auth/AcceptInvitePage.jsx
 import { useState, useEffect } from 'react'
 import { apiFetch } from '../../api/client'
 import { PasswordInput } from '../../components/ui/PasswordInput'
@@ -13,21 +14,21 @@ function formatCpf(value) {
 function isValidCpf(value) {
   const digits = value.replace(/\D/g, '')
   if (digits.length !== 11 || /^(\d)\1{10}$/.test(digits)) return false
-
   const calc = (end) => {
     let sum = 0
     for (let i = 0; i < end; i++) sum += parseInt(digits[i]) * (end + 1 - i)
     const rem = (sum * 10) % 11
     return rem === 10 || rem === 11 ? 0 : rem
   }
-
   return calc(9) === parseInt(digits[9]) && calc(10) === parseInt(digits[10])
 }
 
+const DISABLED_STYLE = { background: 'var(--bg)', color: 'var(--text-soft)' }
+
 export function AcceptInvitePage({ token: inviteToken }) {
-  const [data,    setData]    = useState(null)
-  const [error,   setError]   = useState('')
-  const [loading, setLoading] = useState(true)
+  const [data,     setData]     = useState(null)
+  const [error,    setError]    = useState('')
+  const [loading,  setLoading]  = useState(true)
   const [cpfError, setCpfError] = useState('')
   const [form, setForm] = useState({
     full_name: '', cpf: '', address: '', password: ''
@@ -35,29 +36,52 @@ export function AcceptInvitePage({ token: inviteToken }) {
 
   function set(key, val) { setForm(p => ({ ...p, [key]: val })) }
 
+  // ── flags de bloqueio baseadas nos dados que vieram da API ────────
+  const hasName    = !!data?.prefill_name
+  const hasCpf     = !!data?.prefill_cpf
+  const hasAddress = !!data?.prefill_address
+
   useEffect(() => {
     apiFetch(`/invites/validate/${inviteToken}`)
       .then(res => {
         setData(res)
-        const formattedCpf = formatCpf(res.cpf || '')
-        if (!isValidCpf(res.cpf || '')) {
+        const cpfFormatado = formatCpf(res.prefill_cpf || '')
+
+        // valida CPF apenas se veio pré-preenchido
+        if (res.prefill_cpf && !isValidCpf(res.prefill_cpf)) {
           setCpfError('CPF inválido. Entre em contato com o administrador.')
         }
+
         setForm(p => ({
           ...p,
-          full_name: res.full_name || '',
-          cpf:       formattedCpf,
-          address:   res.address   || '',
+          full_name: res.prefill_name    || '',
+          cpf:       cpfFormatado,
+          address:   res.prefill_address || '',
         }))
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [inviteToken])
 
-  async function handleAccept(e) {
+  function handleCpfChange(e) {
+    const formatted = formatCpf(e.target.value)
+    set('cpf', formatted)
+    if (formatted.replace(/\D/g, '').length === 11) {
+      setCpfError(isValidCpf(formatted) ? '' : 'CPF inválido')
+    } else {
+      setCpfError('')
+    }
+  }
+
+  const isFormValid =
+    form.full_name.trim().length > 0 &&
+    form.password.length >= 6 &&
+    !cpfError
+
+  async function handleSubmit(e) {
     e.preventDefault()
-    if (!isValidCpf(form.cpf)) {
-      setCpfError('CPF inválido. Entre em contato com o administrador.')
+    if (form.cpf && !isValidCpf(form.cpf)) {
+      setCpfError('CPF inválido')
       return
     }
     setLoading(true)
@@ -93,13 +117,14 @@ export function AcceptInvitePage({ token: inviteToken }) {
     }
   }
 
+  // ── Loading ───────────────────────────────────────────────────────
   if (loading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh' }}>
       <div className="spinner" />
     </div>
   )
 
-  // Token inválido
+  // ── Token inválido ────────────────────────────────────────────────
   if (error && !data) return (
     <div className="auth-wrap">
       <div className="auth-left">
@@ -114,7 +139,7 @@ export function AcceptInvitePage({ token: inviteToken }) {
     </div>
   )
 
-  // Caminho A — usuário já existe, só entra
+  // ── Caminho A — usuário já existe ─────────────────────────────────
   if (data?.user_exists) return (
     <div className="auth-wrap">
       <div className="auth-left">
@@ -143,83 +168,110 @@ export function AcceptInvitePage({ token: inviteToken }) {
     </div>
   )
 
-  // Caminho B — novo usuário, completa cadastro
+  // ── Caminho B — novo usuário ──────────────────────────────────────
+  // campos habilitados/desabilitados conforme dados que vieram da API
   return (
     <div className="auth-wrap">
       <div className="auth-left">
         <div className="auth-left-logo">🏘️</div>
-        <h1>Bem-vindo, Gerente!</h1>
-        <p>Complete seu cadastro para acessar {data?.community_name}.</p>
+        <h1>{hasName ? 'Bem-vindo, Fundador!' : 'Bem-vindo!'}</h1>
+        <p>
+          {hasName
+            ? `Sua comunidade ${data?.community_name} foi aprovada!`
+            : `Você foi convidado para ${data?.community_name}.`}
+        </p>
       </div>
       <div className="auth-right">
-        <h2>Complete seu cadastro</h2>
-        <p>Preencha os dados abaixo para criar sua conta.</p>
+        <h2>{hasName ? '🎉 Complete seu cadastro' : 'Criar sua conta'}</h2>
+        <p>
+          {hasName
+            ? 'Seus dados foram preenchidos automaticamente. Crie apenas sua senha.'
+            : 'Preencha seus dados para entrar na comunidade.'}
+        </p>
 
         {error && <div className="auth-error">⚠️ {error}</div>}
 
-        <form onSubmit={handleAccept}>
-          {/* Email somente leitura */}
+        <form onSubmit={handleSubmit}>
+
+          {/* E-mail — sempre somente leitura */}
           <div className="form-group">
             <label className="form-label">E-mail</label>
             <input
               className="form-input"
               value={data?.email || ''}
               disabled
-              style={{ background:'var(--bg)', color:'var(--text-soft)' }}
+              style={DISABLED_STYLE}
             />
           </div>
 
+          {/* Nome — desabilitado se veio da API */}
           <div className="form-group">
-            <label className="form-label">Nome Completo</label>
+            <label className="form-label">Nome Completo *</label>
             <input
               className="form-input"
               value={form.full_name}
               onChange={e => set('full_name', e.target.value)}
-              style={{ background: 'var(--bg)', color: 'var(--text-soft)' }}
+              disabled={hasName}
+              style={hasName ? DISABLED_STYLE : {}}
+              required
+              placeholder="Seu nome completo"
             />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">CPF</label>
-            <input
-              className="form-input"
-              value={form.cpf}
-              disabled
-              maxLength={14}
-              style={{
-                background: 'var(--bg)',
-                color: cpfError ? 'var(--danger, #c00)' : 'var(--text-soft)',
-                borderColor: cpfError ? 'var(--danger, #c00)' : undefined,
-              }}
-            />
-            {cpfError && (
-              <span style={{ color: 'var(--danger, #c00)', fontSize: 12, marginTop: 4, display: 'block' }}>
-                ⚠️ {cpfError}
-              </span>
-            )}
-          </div>
+          {/* CPF — desabilitado se veio da API, oculto se não veio */}
+          {(hasCpf || !hasName) && (
+            <div className="form-group">
+              <label className="form-label">CPF {!hasCpf && '(opcional)'}</label>
+              <input
+                className="form-input"
+                value={form.cpf}
+                onChange={handleCpfChange}
+                disabled={hasCpf}
+                style={{
+                  ...(hasCpf ? DISABLED_STYLE : {}),
+                  ...(cpfError ? { borderColor: 'var(--red)' } : {})
+                }}
+                placeholder="000.000.000-00"
+                maxLength={14}
+              />
+              {cpfError && (
+                <span style={{ color:'var(--red)', fontSize:12, marginTop:4, display:'block' }}>
+                  ⚠️ {cpfError}
+                </span>
+              )}
+            </div>
+          )}
 
-          <div className="form-group">
-            <label className="form-label">Endereço</label>
-            <input
-              className="form-input"
-              value={form.address}
-              disabled
-              style={{ background: 'var(--bg)', color: 'var(--text-soft)' }}
-            />
-          </div>
+          {/* Endereço — desabilitado se veio da API, oculto se não veio */}
+          {(hasAddress || !hasName) && (
+            <div className="form-group">
+              <label className="form-label">Endereço {!hasAddress && '(opcional)'}</label>
+              <input
+                className="form-input"
+                value={form.address}
+                onChange={e => set('address', e.target.value)}
+                disabled={hasAddress}
+                style={hasAddress ? DISABLED_STYLE : {}}
+                placeholder="Rua, número, bairro, cidade"
+              />
+            </div>
+          )}
 
+          {/* Senha — sempre editável */}
           <div className="form-group">
             <label className="form-label">Criar Senha *</label>
             <PasswordInput
               value={form.password}
               onChange={e => set('password', e.target.value)}
-              required placeholder="Mínimo 6 caracteres" minLength={6} />
+              required
+              placeholder="Mínimo 6 caracteres"
+              minLength={6}
+            />
           </div>
 
           <button
             className="btn btn-primary btn-full"
-            disabled={loading}
+            disabled={loading || !isFormValid}
           >
             {loading ? '⌛ Criando conta...' : '✓ Criar Conta e Entrar'}
           </button>

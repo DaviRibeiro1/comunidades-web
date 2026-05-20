@@ -17,7 +17,7 @@ export function AllCommunitiesPage() {
   }, [token])
 
   const totalMembers  = communities.reduce((a, c) => a + (c.member_count  || 0), 0)
-  const totalServices = communities.reduce((a, c) => a + (c.server_count || 0), 0)
+  const totalServices = communities.reduce((a, c) => a + (c.service_count || 0), 0)
 
   return (
     <div className="page">
@@ -73,7 +73,7 @@ export function AllCommunitiesPage() {
                     </td>
                     <td>
                       <span style={{ background: '#EFF6FF', color: 'var(--blue)', padding: '2px 10px', borderRadius: 99, fontSize: 13, fontWeight: 600 }}>
-                        🔧 {c.server_count || 0}
+                        🔧 {c.service_count || 0}
                       </span>
                     </td>
                   </tr>
