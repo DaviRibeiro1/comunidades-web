@@ -1,5 +1,5 @@
 // src/hooks/useCommunities.js
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { communitiesApi } from '../api/services'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -9,16 +9,19 @@ export function useCommunities() {
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!token) return
+    setLoading(true)
     communitiesApi.list(token)
       .then(data => {
         setCommunities(data)
-        if (data.length) setSelected(data[0])
+        if (data.length && !selected) setSelected(data[0])
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [token])
+  }, [token, selected])
 
-  return { communities, selected, setSelected, loading }
+  useEffect(() => { load() }, [load])
+
+  return { communities, selected, setSelected, loading, reload: load }
 }

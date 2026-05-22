@@ -88,7 +88,11 @@ export function AcceptInvitePage({ token: inviteToken }) {
     try {
       const res = await apiFetch('/invites/accept', {
         method: 'POST',
-        body: { token: inviteToken, ...form }
+        body: { 
+          token: inviteToken,
+          ...form,
+          cpf: form.cpf ? form.cpf.replace(/\D/g, '') : null
+        }
       })
       const me = await apiFetch('/auth/me', { token: res.access_token })
       localStorage.setItem('token', res.access_token)
@@ -221,7 +225,7 @@ export function AcceptInvitePage({ token: inviteToken }) {
           {/* CPF — desabilitado se veio da API, oculto se não veio */}
           {(hasCpf || !hasName) && (
             <div className="form-group">
-              <label className="form-label">CPF {!hasCpf && '(opcional)'}</label>
+              <label className="form-label">CPF</label>
               <input
                 className="form-input"
                 value={form.cpf}
