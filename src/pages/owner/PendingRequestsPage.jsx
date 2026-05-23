@@ -128,7 +128,7 @@ export function PendingRequestsPage() {
                   👤 <strong>{r.requester_name}</strong>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                 <span className="status-badge" style={{ background: '#FEF3C7', color: '#92400E' }}>
                   ⏳ Pendente
                 </span>
