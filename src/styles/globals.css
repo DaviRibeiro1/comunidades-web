@@ -196,7 +196,7 @@ tr:hover td { background: var(--bg); }
 
 /* ── Request Card ── */
 .request-card         { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
-.request-card-header  { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+.request-card-header  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
 .request-card-title   { font-size: 17px; font-weight: 700; }
 .request-card-desc    { font-size: 13px; color: var(--text-soft); margin-top: 2px; }
 .request-card-meta    { display: flex; gap: 20px; margin: 14px 0; }

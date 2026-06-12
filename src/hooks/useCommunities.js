@@ -1,5 +1,5 @@
 // src/hooks/useCommunities.js
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { communitiesApi } from '../api/services'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -9,16 +9,35 @@ export function useCommunities() {
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!token) return
+    setLoading(true)
     communitiesApi.list(token)
       .then(data => {
         setCommunities(data)
-        if (data.length) setSelected(data[0])
+        
+        // Tenta recuperar a última comunidade selecionada do localStorage
+        const savedId = localStorage.getItem('last_community_id')
+        const found = data.find(c => String(c.id) === String(savedId))
+        
+        if (found) {
+          setSelected(found)
+        } else if (data.length && !selected) {
+          setSelected(data[0])
+        }
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [token])
+  }, [token, selected])
 
-  return { communities, selected, setSelected, loading }
+  useEffect(() => { load() }, [load])
+
+  // Persiste o ID da comunidade selecionada sempre que ela mudar
+  useEffect(() => {
+    if (selected?.id) {
+      localStorage.setItem('last_community_id', selected.id)
+    }
+  }, [selected])
+
+  return { communities, selected, setSelected, loading, reload: load }
 }

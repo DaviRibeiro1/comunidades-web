@@ -9,23 +9,20 @@ const NAV_BY_ROLE = {
     { id: 'notifications',   icon: '🔔', label: 'Notificações' },
   ],
   FOUNDER: [
-    { id: 'home',            icon: '🏠', label: 'Início' },
-    { id: 'my_services',     icon: '📋', label: 'Meus Anúncios' },
-    { id: 'invite',          icon: '✉️', label: 'Convidar Membros' },
-    { id: 'members',         icon: '👥', label: 'Gerenciar Membros' },
-    { id: 'manage_services', icon: '🔧', label: 'Gerenciar Anúncios' },
-    { id: 'notifications',   icon: '🔔', label: 'Notificações' },
+    { id: 'home',             icon: '🏠', label: 'Início' },
+    { id: 'my_communities',   icon: '🏘️', label: 'Minhas Comunidades' },
+    { id: 'manage_community', icon: '⚙️', label: 'Gerenciar Comunidade' },
+    { id: 'notifications',    icon: '🔔', label: 'Notificações' },
   ],
   MANAGER: [
-    { id: 'home',            icon: '🏠', label: 'Início' },
-    { id: 'my_services',     icon: '📋', label: 'Meus Anúncios' },
-    { id: 'invite',          icon: '✉️', label: 'Convidar Membros' },
-    { id: 'members',         icon: '👥', label: 'Gerenciar Membros' },
-    { id: 'manage_services', icon: '🔧', label: 'Gerenciar Anúncios' },
-    { id: 'notifications',   icon: '🔔', label: 'Notificações' },
+    { id: 'home',             icon: '🏠', label: 'Início' },
+    { id: 'my_communities',   icon: '🏘️', label: 'Minhas Comunidades' },
+    { id: 'manage_community', icon: '⚙️', label: 'Gerenciar Comunidade' },
+    { id: 'notifications',    icon: '🔔', label: 'Notificações' },
   ],
   MEMBER: [
     { id: 'home',            icon: '🏠', label: 'Início' },
+    { id: 'my_communities',  icon: '🏘️', label: 'Minhas Comunidades' },
     { id: 'my_services',     icon: '📋', label: 'Meus Anúncios' },
     { id: 'my_applications', icon: '✅', label: 'Minhas Candidaturas' },
     { id: 'notifications',   icon: '🔔', label: 'Notificações' },
@@ -42,24 +39,21 @@ export function Sidebar({
 
   return (
     <div className="sidebar">
-      {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">🏘️</div>
         <h2>Comunidades</h2>
       </div>
 
-      {/* User info */}
       <div className="sidebar-user">
         <div className="sidebar-user-name">{user?.full_name}</div>
         <div className="sidebar-user-email">{user?.email}</div>
         <RoleBadge role={effectiveRole} />
       </div>
 
-      {/* Community selector */}
       {effectiveRole !== 'OWNER' && communities.length > 0 && (
         <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-soft)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>
-            Comunidade
+            Comunidade ativa
           </div>
           <select
             className="form-select"
@@ -77,7 +71,6 @@ export function Sidebar({
         </div>
       )}
 
-      {/* Nav items */}
       <nav className="sidebar-nav">
         {items.map(item => (
           <div
@@ -94,11 +87,8 @@ export function Sidebar({
         ))}
       </nav>
 
-      {/* Logout */}
       <div className="sidebar-footer">
-        <button className="logout-btn" onClick={onLogout}>
-          🚪 Sair da conta
-        </button>
+        <button className="logout-btn" onClick={onLogout}>🚪 Sair da conta</button>
       </div>
     </div>
   )
