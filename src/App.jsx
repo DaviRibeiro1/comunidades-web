@@ -55,6 +55,7 @@ function AuthenticatedApp() {
         return (
           <NotificationsPage
             notifications={notifications}
+            communities={communities}
             onMarkAll={markAll}
             onMarkOne={markOne}
             onCommunitiesReload={reloadCommunities}

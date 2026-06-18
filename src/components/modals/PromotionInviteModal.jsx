@@ -1,13 +1,14 @@
 import { Modal } from '../ui/Modal'
 
 export function PromotionInviteModal({
-  communityName,
-  inviterName,
+  community,
   loading,
   onAccept,
   onDecline,
   onClose,
 }) {
+  const communityName = community?.name || 'sua comunidade'
+
   return (
     <Modal
       title="Convite para ser gerente"
@@ -38,22 +39,11 @@ export function PromotionInviteModal({
         border: '1px solid var(--green-mid)',
         borderRadius: 8,
         padding: 14,
-        marginBottom: 16,
       }}>
-        <p style={{ fontSize: 13, color: 'var(--green)', fontWeight: 600 }}>
-          Você recebeu um convite de promoção!
+        <p style={{ fontSize: 14, color: 'var(--text-mid)', lineHeight: 1.5, margin: 0 }}>
+          Você foi convidado para ser gerente da comunidade{' '}
+          <strong style={{ color: 'var(--green)' }}>{communityName}</strong>.
         </p>
-      </div>
-
-      <div className="detail-row">
-        <span className="detail-label">🏘️ Comunidade</span>
-        <span className="detail-value" style={{ fontWeight: 600 }}>
-          {communityName || '—'}
-        </span>
-      </div>
-      <div className="detail-row">
-        <span className="detail-label">👤 Convidado por</span>
-        <span className="detail-value">{inviterName || '—'}</span>
       </div>
     </Modal>
   )

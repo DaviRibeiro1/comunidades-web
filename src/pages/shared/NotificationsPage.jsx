@@ -6,27 +6,103 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
 import { PromotionInviteModal } from '../../components/modals/PromotionInviteModal'
 
+function getRespondedPromotionTokens() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem('responded_promotion_tokens') || '[]'))
+  } catch {
+    return new Set()
+  }
+}
+
+function markPromotionResponded(promoToken) {
+  if (!promoToken) return
+  const tokens = getRespondedPromotionTokens()
+  tokens.add(promoToken)
+  localStorage.setItem('responded_promotion_tokens', JSON.stringify([...tokens]))
+}
+
+function isPromotionResponded(n) {
+  if (!n?.reference_id) return true
+  if (getRespondedPromotionTokens().has(n.reference_id)) return true
+  const status = String(n.status || n.metadata?.status || '').toUpperCase()
+  return ['ACCEPTED', 'DECLINED', 'RESOLVED', 'COMPLETED'].includes(status)
+}
+
+function resolvePromotionCommunity(n, communities = []) {
+  const communityId =
+    n.community_id ||
+    n.metadata?.community_id ||
+    n.community?.id
+
+  const fromList = communityId
+    ? communities.find(c => String(c.id) === String(communityId))
+    : null
+
+  if (fromList) return fromList
+
+  const bodyMatch = n.body?.match(
+    /(?:gerente(?:\s+da comunidade|\s+em)|ser gerente em)\s+(.+?)\.?$/i
+  )
+  const nameFromBody = bodyMatch?.[1]?.trim()
+  if (nameFromBody) {
+    const byName = communities.find(
+      c => c.name?.toLowerCase() === nameFromBody.toLowerCase()
+    )
+    if (byName) return byName
+  }
+
+  const parsed = parsePromotionFromNotification(n)
+  if (parsed.community?.name) {
+    const byParsedName = communities.find(
+      c => c.name?.toLowerCase() === parsed.community.name.toLowerCase()
+    )
+    if (byParsedName) return byParsedName
+  }
+
+  return parsed.community
+}
+
 function parsePromotionFromNotification(n) {
-  const communityName = n.community_name || n.metadata?.community_name
-  const inviterName = n.inviter_name || n.metadata?.inviter_name
+  const community =
+    n.community ||
+    n.metadata?.community ||
+    (n.community_name || n.metadata?.community_name
+      ? { name: n.community_name || n.metadata?.community_name }
+      : null)
 
-  if (communityName && inviterName) {
-    return { communityName, inviterName }
+  const communityName =
+    community?.name ||
+    n.community_name ||
+    n.metadata?.community_name
+
+  const titleMatch = n.title?.match(/(?:gerente|promoção)\s+(?:em|da)\s+(.+?)$/i)
+
+  const bodyPatterns = [
+    /^(.+?)\s+te convidou para ser gerente em\s+(.+?)\.?$/i,
+    /convidado\s+por\s+(.+?)\s+para ser gerente(?:\s+da comunidade|\s+em)\s+(.+?)\.?$/i,
+    /convite de\s+(.+?)\s+para ser gerente em\s+(.+?)\.?$/i,
+  ]
+
+  for (const pattern of bodyPatterns) {
+    const match = n.body?.match(pattern)
+    if (match) {
+      const parsedCommunityName = communityName || match[2]?.trim() || titleMatch?.[1]?.trim()
+      return {
+        community: community || (parsedCommunityName ? { name: parsedCommunityName } : null),
+      }
+    }
   }
 
-  const match = n.body?.match(/^(.+?)\s+te convidou para ser gerente em\s+(.+?)\.?$/i)
-  if (match) {
-    return { inviterName: match[1].trim(), communityName: match[2].trim() }
-  }
+  const resolvedName = communityName || titleMatch?.[1]?.trim()
 
   return {
-    communityName: communityName || n.title?.replace(/^Convite para ser gerente em\s+/i, '') || '—',
-    inviterName: inviterName || '—',
+    community: community || (resolvedName ? { name: resolvedName } : null),
   }
 }
 
 export function NotificationsPage({
   notifications,
+  communities = [],
   onMarkAll,
   onMarkOne,
   onCommunitiesReload,
@@ -39,14 +115,16 @@ export function NotificationsPage({
   const [inviteToken, setInviteToken] = useState(null)
   const [promotionInvite, setPromotionInvite] = useState(null)
   const [loading,     setLoading]     = useState(false)
+  const [respondedTokens, setRespondedTokens] = useState(() => getRespondedPromotionTokens())
 
   function openPromotionModal(n) {
-    const { communityName, inviterName } = parsePromotionFromNotification(n)
+    if (isPromotionResponded(n)) return
+
+    const community = resolvePromotionCommunity(n, communities)
     setPromotionInvite({
       notificationId: n.id,
       promoToken: n.reference_id,
-      communityName,
-      inviterName,
+      community,
       isRead: n.is_read,
     })
   }
@@ -57,15 +135,10 @@ export function NotificationsPage({
     const match = notifications.find(
       n => n.type === 'PROMOTION_INVITE' && n.reference_id === initialPromotionToken
     )
-    if (match) {
+
+    if (match && !isPromotionResponded(match)) {
       openPromotionModal(match)
       if (!match.is_read) onMarkOne(match.id)
-    } else {
-      setPromotionInvite({
-        promoToken: initialPromotionToken,
-        communityName: '—',
-        inviterName: '—',
-      })
     }
 
     window.history.replaceState({}, '', window.location.pathname)
@@ -73,7 +146,7 @@ export function NotificationsPage({
 
   async function handleNotificationClick(n) {
     if (n.type === 'COMMUNITY_APPROVED' && n.is_read) return
-    if (n.type === 'PROMOTION_INVITE' && n.is_read && !n.reference_id) return
+    if (n.type === 'PROMOTION_INVITE' && isPromotionResponded(n)) return
 
     if (!n.is_read) onMarkOne(n.id)
 
@@ -90,8 +163,8 @@ export function NotificationsPage({
       }
     }
 
-    if (n.type === 'PROMOTION_INVITE' && n.reference_id) {
-      openPromotionModal({ ...n, is_read: true })
+    if (n.type === 'PROMOTION_INVITE' && n.reference_id && !isPromotionResponded(n)) {
+      openPromotionModal(n)
     }
   }
 
@@ -122,6 +195,8 @@ export function NotificationsPage({
     setLoading(true)
     try {
       await communitiesApi.acceptPromotion(token, promotionInvite.promoToken)
+      markPromotionResponded(promotionInvite.promoToken)
+      setRespondedTokens(getRespondedPromotionTokens())
       toast('🎉 Promoção aceita! Você agora é gerente.')
       setPromotionInvite(null)
       onCommunitiesReload?.()
@@ -138,6 +213,8 @@ export function NotificationsPage({
     setLoading(true)
     try {
       await communitiesApi.declinePromotion(token, promotionInvite.promoToken)
+      markPromotionResponded(promotionInvite.promoToken)
+      setRespondedTokens(getRespondedPromotionTokens())
       toast('Convite de promoção recusado.')
       setPromotionInvite(null)
       onNotificationsReload?.()
@@ -150,13 +227,23 @@ export function NotificationsPage({
 
   function isClickable(n) {
     if (n.type === 'COMMUNITY_APPROVED') return !n.is_read
-    if (n.type === 'PROMOTION_INVITE') return !!n.reference_id
+    if (n.type === 'PROMOTION_INVITE') {
+      return !!n.reference_id && !isPromotionResponded(n)
+    }
     return false
   }
 
   function isDimmed(n) {
     if (n.type === 'COMMUNITY_APPROVED' && n.is_read) return true
+    if (n.type === 'PROMOTION_INVITE' && isPromotionResponded(n)) return true
     return false
+  }
+
+  function promotionRespondedLabel(n) {
+    const status = String(n.status || n.metadata?.status || '').toUpperCase()
+    if (status === 'ACCEPTED') return '✓ Promoção aceita'
+    if (status === 'DECLINED') return '✓ Convite recusado'
+    return '✓ Já respondido'
   }
 
   const unread = notifications.filter(n => !n.is_read).length
@@ -216,12 +303,21 @@ export function NotificationsPage({
                   </span>
                 )}
 
-                {n.type === 'PROMOTION_INVITE' && n.reference_id && (
+                {n.type === 'PROMOTION_INVITE' && n.reference_id && !isPromotionResponded(n) && (
                   <span style={{
                     fontSize: 11, color: 'var(--green)',
                     fontWeight: 600, marginTop: 4, display: 'block'
                   }}>
                     → Clique para responder
+                  </span>
+                )}
+
+                {n.type === 'PROMOTION_INVITE' && isPromotionResponded(n) && (
+                  <span style={{
+                    fontSize: 11, color: 'var(--text-soft)',
+                    marginTop: 4, display: 'block'
+                  }}>
+                    {promotionRespondedLabel(n)}
                   </span>
                 )}
               </div>
@@ -287,8 +383,7 @@ export function NotificationsPage({
 
       {promotionInvite && (
         <PromotionInviteModal
-          communityName={promotionInvite.communityName}
-          inviterName={promotionInvite.inviterName}
+          community={promotionInvite.community}
           loading={loading}
           onAccept={handleAcceptPromotion}
           onDecline={handleDeclinePromotion}
