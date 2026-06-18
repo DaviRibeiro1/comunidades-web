@@ -26,6 +26,8 @@ export function ManageCommunityPage({ community, currentRole, onDeleted }) {
   // invite
   const [inviteEmail, setInviteEmail] = useState('')
   const [sentEmails,  setSentEmails]  = useState([])
+  const [pendingPromotions, setPendingPromotions] = useState(new Set())
+  const [promoting, setPromoting] = useState(null)
 
   const canEditDelete = currentRole === 'FOUNDER' || currentRole === 'OWNER'
 
@@ -36,7 +38,13 @@ export function ManageCommunityPage({ community, currentRole, onDeleted }) {
       communitiesApi.members(token, community.id),
       servicesApi.byCommunity(token, community.id),
     ])
-      .then(([m, s]) => { setMembers(m); setServices(s) })
+      .then(([m, s]) => {
+        setMembers(m)
+        setServices(s)
+        setPendingPromotions(new Set(
+          m.filter(member => member.promotion_pending).map(member => member.user_id)
+        ))
+      })
       .catch(() => {})
       .finally(() => setLoading(false))
 
@@ -96,6 +104,23 @@ export function ManageCommunityPage({ community, currentRole, onDeleted }) {
     } catch (err) {
       toast(err.message, 'error')
     }
+  }
+
+  async function handlePromoteMember(userId) {
+    setPromoting(userId)
+    try {
+      await communitiesApi.promoteMember(token, community.id, userId)
+      setPendingPromotions(p => new Set([...p, userId]))
+      toast('Convite de promoção enviado!')
+    } catch (err) {
+      toast(err.message, 'error')
+    } finally {
+      setPromoting(null)
+    }
+  }
+
+  function isPromotionPending(userId, member) {
+    return pendingPromotions.has(userId) || member?.promotion_pending
   }
 
   async function handleDeleteService(serviceId, title) {
@@ -240,10 +265,19 @@ export function ManageCommunityPage({ community, currentRole, onDeleted }) {
                       <div style={{ display: 'flex', gap: 6, marginLeft: 8 }}>
                         {/* Trocar papel — só FOUNDER */}
                         {currentRole === 'FOUNDER' && m.role === 'MEMBER' && (
-                          <button className="btn btn-outline btn-sm"
-                            onClick={() => handleChangeRole(m.user_id, 'MANAGER')}>
-                            ↑ Gerente
-                          </button>
+                          isPromotionPending(m.user_id, m) ? (
+                            <button className="btn btn-outline btn-sm" disabled>
+                              ⏳ Convite pendente
+                            </button>
+                          ) : (
+                            <button
+                              className="btn btn-outline btn-sm"
+                              onClick={() => handlePromoteMember(m.user_id)}
+                              disabled={promoting === m.user_id}
+                            >
+                              {promoting === m.user_id ? '⌛' : '↑ Promover'}
+                            </button>
+                          )
                         )}
                         {currentRole === 'FOUNDER' && m.role === 'MANAGER' && (
                           <button className="btn btn-outline btn-sm"

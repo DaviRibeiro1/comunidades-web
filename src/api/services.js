@@ -17,6 +17,12 @@ export const communitiesApi = {
   members:    (token, id)        => apiFetch(`/communities/${id}/members`, { token }),
   removeMember: (token, cId, uId) => apiFetch(`/communities/${cId}/members/${uId}`, { method: 'DELETE', token }),
   changeRole: (token, cId, uId, role) => apiFetch(`/communities/${cId}/members/${uId}/role?new_role=${role}`, { method: 'PATCH', token }),
+  promoteMember: (token, cId, uId) =>
+    apiFetch(`/communities/${cId}/members/${uId}/role?new_role=MANAGER`, { method: 'PATCH', token }),
+  acceptPromotion: (token, promoToken) =>
+    apiFetch(`/communities/accept-promotion/${promoToken}`, { method: 'POST', token }),
+  declinePromotion: (token, promoToken) =>
+    apiFetch(`/communities/decline-promotion/${promoToken}`, { method: 'POST', token }),
   update: (token, id, body) => apiFetch(`/communities/${id}`, { method: 'PATCH', token, body }),
   delete: (token, id) => apiFetch(`/communities/${id}`, { method: 'DELETE', token }),
 }
