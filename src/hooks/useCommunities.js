@@ -15,20 +15,19 @@ export function useCommunities() {
     communitiesApi.list(token)
       .then(data => {
         setCommunities(data)
-        
-        // Tenta recuperar a última comunidade selecionada do localStorage
+
         const savedId = localStorage.getItem('last_community_id')
         const found = data.find(c => String(c.id) === String(savedId))
-        
-        if (found) {
-          setSelected(found)
-        } else if (data.length && !selected) {
-          setSelected(data[0])
-        }
+
+        setSelected(prev => {
+          if (found) return found
+          if (prev && data.some(c => String(c.id) === String(prev.id))) return prev
+          return data.length ? data[0] : null
+        })
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [token, selected])
+  }, [token])
 
   useEffect(() => { load() }, [load])
 

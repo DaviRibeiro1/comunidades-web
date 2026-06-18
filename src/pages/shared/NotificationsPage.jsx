@@ -1,19 +1,79 @@
 // src/pages/shared/NotificationsPage.jsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { apiFetch } from '../../api/client'
+import { communitiesApi } from '../../api/services'
 import { useAuth } from '../../contexts/AuthContext'
 import { useToast } from '../../contexts/ToastContext'
+import { PromotionInviteModal } from '../../components/modals/PromotionInviteModal'
 
-export function NotificationsPage({ notifications, onMarkAll, onMarkOne, onCommunitiesReload }) {
+function parsePromotionFromNotification(n) {
+  const communityName = n.community_name || n.metadata?.community_name
+  const inviterName = n.inviter_name || n.metadata?.inviter_name
+
+  if (communityName && inviterName) {
+    return { communityName, inviterName }
+  }
+
+  const match = n.body?.match(/^(.+?)\s+te convidou para ser gerente em\s+(.+?)\.?$/i)
+  if (match) {
+    return { inviterName: match[1].trim(), communityName: match[2].trim() }
+  }
+
+  return {
+    communityName: communityName || n.title?.replace(/^Convite para ser gerente em\s+/i, '') || '—',
+    inviterName: inviterName || '—',
+  }
+}
+
+export function NotificationsPage({
+  notifications,
+  onMarkAll,
+  onMarkOne,
+  onCommunitiesReload,
+  onNotificationsReload,
+  initialPromotionToken,
+}) {
   const { token } = useAuth()
   const toast     = useToast()
   const [inviteData,  setInviteData]  = useState(null)
   const [inviteToken, setInviteToken] = useState(null)
+  const [promotionInvite, setPromotionInvite] = useState(null)
   const [loading,     setLoading]     = useState(false)
 
+  function openPromotionModal(n) {
+    const { communityName, inviterName } = parsePromotionFromNotification(n)
+    setPromotionInvite({
+      notificationId: n.id,
+      promoToken: n.reference_id,
+      communityName,
+      inviterName,
+      isRead: n.is_read,
+    })
+  }
+
+  useEffect(() => {
+    if (!initialPromotionToken || notifications.length === 0) return
+
+    const match = notifications.find(
+      n => n.type === 'PROMOTION_INVITE' && n.reference_id === initialPromotionToken
+    )
+    if (match) {
+      openPromotionModal(match)
+      if (!match.is_read) onMarkOne(match.id)
+    } else {
+      setPromotionInvite({
+        promoToken: initialPromotionToken,
+        communityName: '—',
+        inviterName: '—',
+      })
+    }
+
+    window.history.replaceState({}, '', window.location.pathname)
+  }, [initialPromotionToken, notifications])
+
   async function handleNotificationClick(n) {
-    // ← notificações já lidas de comunidade não abrem modal
     if (n.type === 'COMMUNITY_APPROVED' && n.is_read) return
+    if (n.type === 'PROMOTION_INVITE' && n.is_read && !n.reference_id) return
 
     if (!n.is_read) onMarkOne(n.id)
 
@@ -28,6 +88,10 @@ export function NotificationsPage({ notifications, onMarkAll, onMarkOne, onCommu
       } finally {
         setLoading(false)
       }
+    }
+
+    if (n.type === 'PROMOTION_INVITE' && n.reference_id) {
+      openPromotionModal({ ...n, is_read: true })
     }
   }
 
@@ -53,9 +117,45 @@ export function NotificationsPage({ notifications, onMarkAll, onMarkOne, onCommu
     }
   }
 
-  // ── helper: define cursor e interatividade por notificação ──────
+  async function handleAcceptPromotion() {
+    if (!promotionInvite?.promoToken) return
+    setLoading(true)
+    try {
+      await communitiesApi.acceptPromotion(token, promotionInvite.promoToken)
+      toast('🎉 Promoção aceita! Você agora é gerente.')
+      setPromotionInvite(null)
+      onCommunitiesReload?.()
+      onNotificationsReload?.()
+    } catch (err) {
+      toast(err.message, 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleDeclinePromotion() {
+    if (!promotionInvite?.promoToken) return
+    setLoading(true)
+    try {
+      await communitiesApi.declinePromotion(token, promotionInvite.promoToken)
+      toast('Convite de promoção recusado.')
+      setPromotionInvite(null)
+      onNotificationsReload?.()
+    } catch (err) {
+      toast(err.message, 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   function isClickable(n) {
     if (n.type === 'COMMUNITY_APPROVED') return !n.is_read
+    if (n.type === 'PROMOTION_INVITE') return !!n.reference_id
+    return false
+  }
+
+  function isDimmed(n) {
+    if (n.type === 'COMMUNITY_APPROVED' && n.is_read) return true
     return false
   }
 
@@ -89,8 +189,8 @@ export function NotificationsPage({ notifications, onMarkAll, onMarkOne, onCommu
               className={`notif-item ${!n.is_read ? 'unread' : ''}`}
               onClick={() => handleNotificationClick(n)}
               style={{
-                cursor:  isClickable(n) ? 'pointer' : 'default',
-                opacity: n.type === 'COMMUNITY_APPROVED' && n.is_read ? 0.6 : 1,
+                cursor: isClickable(n) ? 'pointer' : 'default',
+                opacity: isDimmed(n) ? 0.6 : 1,
               }}
             >
               <div className={`notif-dot ${n.is_read ? 'read' : ''}`} />
@@ -98,7 +198,6 @@ export function NotificationsPage({ notifications, onMarkAll, onMarkOne, onCommu
                 <div className="notif-title">{n.title}</div>
                 <div className="notif-body">{n.body}</div>
 
-                {/* badge acionável — só se não lida */}
                 {n.type === 'COMMUNITY_APPROVED' && !n.is_read && (
                   <span style={{
                     fontSize: 11, color: 'var(--green)',
@@ -108,7 +207,6 @@ export function NotificationsPage({ notifications, onMarkAll, onMarkOne, onCommu
                   </span>
                 )}
 
-                {/* badge já confirmada */}
                 {n.type === 'COMMUNITY_APPROVED' && n.is_read && (
                   <span style={{
                     fontSize: 11, color: 'var(--text-soft)',
@@ -117,13 +215,21 @@ export function NotificationsPage({ notifications, onMarkAll, onMarkOne, onCommu
                     ✓ Já confirmado
                   </span>
                 )}
+
+                {n.type === 'PROMOTION_INVITE' && n.reference_id && (
+                  <span style={{
+                    fontSize: 11, color: 'var(--green)',
+                    fontWeight: 600, marginTop: 4, display: 'block'
+                  }}>
+                    → Clique para responder
+                  </span>
+                )}
               </div>
             </div>
           ))
         )}
       </div>
 
-      {/* Modal de confirmação */}
       {inviteData && (
         <div className="modal-overlay">
           <div className="modal">
@@ -177,6 +283,17 @@ export function NotificationsPage({ notifications, onMarkAll, onMarkOne, onCommu
             </div>
           </div>
         </div>
+      )}
+
+      {promotionInvite && (
+        <PromotionInviteModal
+          communityName={promotionInvite.communityName}
+          inviterName={promotionInvite.inviterName}
+          loading={loading}
+          onAccept={handleAcceptPromotion}
+          onDecline={handleDeclinePromotion}
+          onClose={() => setPromotionInvite(null)}
+        />
       )}
     </div>
   )

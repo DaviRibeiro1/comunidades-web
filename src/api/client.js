@@ -1,6 +1,5 @@
 // src/api/client.js
-// const BASE_URL = 'https://web-production-8f5c4.up.railway.app'
-const BASE_URL = 'http://localhost:8000'
+const BASE_URL = 'https://web-production-8f5c4.up.railway.app'
 
 export async function apiFetch(path, { method = 'GET', body, token } = {}) {
   const headers = { 'Content-Type': 'application/json' }

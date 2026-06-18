@@ -19,8 +19,13 @@ import { MyApplicationsPage } from './pages/member/MyApplicationsPage'
 function AuthenticatedApp() {
   const { user, logout }                                          = useAuth()
   const { communities, selected, setSelected, reload: reloadCommunities } = useCommunities()
-  const { notifications, unreadCount, markOne, markAll }          = useNotifications()
-  const [page, setPage] = useState('home')
+  const { notifications, unreadCount, markOne, markAll, reload: reloadNotifications } = useNotifications()
+  const [page, setPage] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('promotion') ? 'notifications' : 'home'
+  })
+
+  const promotionToken = new URLSearchParams(window.location.search).get('promotion')
 
   const effectiveRole = selected?.my_role || user?.global_role || 'MEMBER'
 
@@ -53,6 +58,8 @@ function AuthenticatedApp() {
             onMarkAll={markAll}
             onMarkOne={markOne}
             onCommunitiesReload={reloadCommunities}
+            onNotificationsReload={reloadNotifications}
+            initialPromotionToken={promotionToken}
           />
         )
 
