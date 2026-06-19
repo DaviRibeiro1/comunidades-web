@@ -45,7 +45,7 @@ Este repositório contém apenas o **frontend web**. O backend está em [comunid
 - 🏘️ **Minhas comunidades** — lista todas com papel e estatísticas
 - 🔔 **Notificações acionáveis** — aprovação de comunidade e convite de promoção abrem modal ao clicar
 - ⚙️ **Editar e excluir comunidade** com confirmação por digitação do nome
-- 👑 **Painel do Dono** — aprovar/rejeitar pedidos e visualizar todas as comunidades
+- 👑 **Painel do Admin** — aprovar/rejeitar pedidos e visualizar todas as comunidades
 - 📱 **Design responsivo** — funciona em computador, tablet e celular
 
 ---
